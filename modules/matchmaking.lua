@@ -81,7 +81,7 @@ function matchmaking.leave_queue(context, payload)
     })
 end
 
--- Try to create a match with available players (simplified version)
+-- Try to create a match with available players 
 function matchmaking.try_create_match(match_type, initiator_rank)
     local required_players = (match_type == MATCH_TYPES.ONE_V_ONE) and 2 or 6
     
@@ -92,14 +92,31 @@ function matchmaking.try_create_match(match_type, initiator_rank)
         return nil -- Not enough players
     end
     
-    -- For now, just return a mock match ID
-    -- In a full implementation, this would create an actual match
-    local match_id = "match_" .. os.time() .. "_" .. math.random(1000)
+    -- Select players for the match
+    local selected_players = {}
+    for i = 1, required_players do
+        table.insert(selected_players, queue_players[i])
+    end
+    
+    -- Create a match ID (in a real implementation, this would be handled by the game client)
+    local match_id = "match_" .. match_type .. "_" .. os.time() .. "_" .. math.random(1000)
+    
+    -- Store match information
+    local match_data = {
+        match_id = match_id,
+        match_type = match_type,
+        players = selected_players,
+        created_at = os.time(),
+        status = "active"
+    }
+    
+    nk.storage_write({
+        {collection = "active_matches", key = match_id, value = nk.json_encode(match_data)}
+    })
     
     -- Remove selected players from queue
     local delete_requests = {}
-    for i = 1, required_players do
-        local player = queue_players[i]
+    for _, player in ipairs(selected_players) do
         table.insert(delete_requests, {
             collection = MATCHMAKING_QUEUE_COLLECTION,
             key = player.user_id
